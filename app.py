@@ -4,9 +4,9 @@ import os
 from datetime import date
 
 
-# ==========================================
+# ==============================
 # PAGE SETTINGS
-# ==========================================
+# ==============================
 
 st.set_page_config(
     page_title="AI Study Planner",
@@ -15,28 +15,26 @@ st.set_page_config(
 )
 
 
-# ==========================================
+# ==============================
 # HEADER
-# ==========================================
+# ==============================
 
 st.title("📚 AI Study Planner")
 
 st.subheader("🤖 Your Personal AI-Powered Study Assistant")
 
 st.write(
-    "Create a personalized day-by-day study plan "
-    "based on your subject, exam date, study time, "
-    "difficulty level and topics."
+    "Create personalized, day-by-day study plans "
+    "based on your subjects, exam date, study time, "
+    "difficulty level, and topics."
 )
 
 st.caption("✨ Developed by Shahzeb | Data Science & AI")
 
-st.divider()
 
-
-# ==========================================
+# ==============================
 # LANGUAGE
-# ==========================================
+# ==============================
 
 language = st.radio(
     "🌐 Language",
@@ -45,298 +43,147 @@ language = st.radio(
 )
 
 
-# ==========================================
-# USER INPUTS
-# ==========================================
+# ==============================
+# USER INPUT
+# ==============================
 
 subject = st.text_input(
     "📖 Subject",
-    placeholder="Example: Machine Learning"
+    placeholder="e.g. Artificial Intelligence"
 )
-
 
 exam_date = st.date_input(
     "📅 Exam Date",
     min_value=date.today()
 )
 
-
 study_hours = st.number_input(
     "⏰ Daily Study Hours",
     min_value=1,
     max_value=12,
-    value=3
+    value=2
 )
-
 
 difficulty = st.selectbox(
-    "🎯 Difficulty Level",
-    [
-        "Beginner",
-        "Intermediate",
-        "Advanced"
-    ]
+    "📊 Difficulty Level",
+    ["Easy", "Medium", "Hard"]
 )
-
 
 topics = st.text_area(
-    "📝 Topics",
-    placeholder=(
-        "Example:\n"
-        "Linear Regression\n"
-        "SVM\n"
-        "Decision Tree\n"
-        "Random Forest\n"
-        "K-Means"
-    )
+    "📝 Topics / Syllabus",
+    placeholder="e.g. AI Agents, Search Algorithms, Machine Learning, Neural Networks"
 )
 
 
-# ==========================================
-# CALCULATE DAYS
-# ==========================================
-
-today = date.today()
-
-remaining_days = (exam_date - today).days
-
-
-if remaining_days > 0:
-
-    st.info(
-        f"📅 {remaining_days} days remaining until your exam."
-    )
-
-elif remaining_days == 0:
-
-    st.warning(
-        "⚠️ Your exam is today!"
-    )
-
-
-# ==========================================
-# GET API KEY
-# ==========================================
+# ==============================
+# API KEY FUNCTION
+# ==============================
 
 def get_api_key():
 
-    # First try Streamlit Secrets
     try:
-
         api_key = st.secrets["OPENROUTER_API_KEY"]
 
         if api_key:
-            return api_key
+            return api_key.strip()
 
-    except Exception:
-        pass
+    except Exception as e:
+        st.error(f"Secrets Error: {e}")
 
-
-    # If running locally, try environment variable
+    # Local computer fallback
     api_key = os.getenv("OPENROUTER_API_KEY")
 
     if api_key:
-        return api_key
-
+        return api_key.strip()
 
     return None
 
 
-# ==========================================
-# GENERATE AI PLAN
-# ==========================================
+# ==============================
+# AI STUDY PLAN FUNCTION
+# ==============================
 
-def generate_ai_plan():
+def generate_study_plan(
+    subject,
+    exam_date,
+    study_hours,
+    difficulty,
+    topics,
+    language
+):
 
     api_key = get_api_key()
 
-
     if not api_key:
+        return "❌ API Key nahi mili. Streamlit Cloud → Settings → Secrets mein OPENROUTER_API_KEY add karein."
 
-        return (
-            "❌ API Key nahi mili.\n\n"
-            "Streamlit Cloud mein Settings → Secrets mein "
-            "OPENROUTER_API_KEY add karein."
-        )
+    today = date.today()
 
+    remaining_days = (exam_date - today).days
 
-    # ======================================
-    # LANGUAGE INSTRUCTIONS
-    # ======================================
-
-    if language == "English":
-
-        language_instruction = """
-Write the complete study plan in simple English.
-"""
-
-
-    elif language == "Roman Urdu":
-
-        language_instruction = """
-Write the complete study plan in simple Roman Urdu.
-
-IMPORTANT:
-- Urdu/Arabic script bilkul use na karein.
-- Roman Urdu use karein.
-- English technical terms ko English mein rehne dein.
-- Difficult technical terms ko simple Roman Urdu mein explain karein.
-
-Example:
-"Regression ka basic concept samjho aur examples practice karo."
-"""
-
-
-    else:
-
-        language_instruction = """
-Write the complete study plan in Urdu script.
-
-Use English technical terms such as:
-Regression, SVM, Decision Tree, MCQs
-where appropriate.
-"""
-
-
-    # ======================================
-    # TOPIC INFORMATION
-    # ======================================
-
-    if remaining_days > 0:
-
-        days_instruction = f"""
-The student has exactly {remaining_days} days
-remaining before the exam.
-
-Create a study plan covering these {remaining_days} days.
-
-Do not create more days than the remaining days.
-"""
-
-
-    else:
-
-        days_instruction = """
-The exam date has arrived.
-Create an emergency revision plan for today.
-"""
-
-
-    # ======================================
-    # AI PROMPT
-    # ======================================
+    if remaining_days < 1:
+        return "❌ Exam date valid nahi hai."
 
     prompt = f"""
-You are an expert AI Study Planner.
+You are an expert AI study planner.
 
-Create a personalized and realistic study plan.
+Create a personalized day-by-day study plan.
 
-STUDENT INFORMATION:
+Student Information:
 
-Subject:
-{subject}
+Subject: {subject}
 
-Exam Date:
-{exam_date}
+Exam Date: {exam_date}
 
-Days Remaining:
-{remaining_days}
+Today: {today}
 
-Daily Study Hours:
-{study_hours}
+Remaining Days: {remaining_days}
 
-Difficulty Level:
-{difficulty}
+Daily Study Hours: {study_hours}
+
+Difficulty Level: {difficulty}
 
 Topics:
 {topics}
 
+Language: {language}
 
-{days_instruction}
+IMPORTANT REQUIREMENTS:
 
+1. Create exactly {remaining_days} days of study planning.
+2. Do not create extra days.
+3. Divide the topics intelligently across the available days.
+4. Mention the day number clearly.
+5. Mention what the student should study each day.
+6. Include the recommended study time.
+7. Include revision.
+8. Include practice questions or MCQs.
+9. Include important exam tips.
+10. Keep the plan realistic for {study_hours} hours per day.
+11. Give a final revision strategy before the exam.
+12. Write the complete response in {language}.
 
-{language_instruction}
-
-
-For EVERY DAY include:
-
-1. Day number
-2. Topic
-3. Study time
-4. What to study
-5. Practice questions or MCQs
-6. Revision
-
-
-IMPORTANT:
-
-- Give more time to difficult topics.
-- Give priority to important topics.
-- Include revision.
-- Include MCQ practice.
-- Include a final revision before the exam.
-- Make the plan realistic.
-- Do not overload the student.
-- Give useful exam preparation tips at the end.
-
-
-FORMAT:
-
-📅 Day 1
-📚 Topic:
-⏰ Study Time:
-📖 What to Study:
-📝 Practice/MCQs:
-🔄 Revision:
-
-
-Continue this format for every study day.
-
-At the end provide:
-
-🎯 Important Topics
-🔄 Final Revision Strategy
-💡 Exam Preparation Tips
+Make the plan clear and easy for a university student to follow.
 """
-
-
-    # ======================================
-    # OPENROUTER API
-    # ======================================
 
     url = "https://openrouter.ai/api/v1/chat/completions"
 
-
     headers = {
-
         "Authorization": f"Bearer {api_key}",
-
         "Content-Type": "application/json",
-
-        "HTTP-Referer": "https://streamlit.io",
-
+        "HTTP-Referer": "https://aistudyplanner.streamlit.app",
         "X-Title": "AI Study Planner"
-
     }
 
-
     data = {
-
         "model": "openrouter/free",
-
         "messages": [
-
             {
                 "role": "user",
                 "content": prompt
             }
-
-        ],
-
-        "temperature": 0.7
-
+        ]
     }
-
 
     try:
 
@@ -344,96 +191,75 @@ At the end provide:
             url,
             headers=headers,
             json=data,
-            timeout=90
+            timeout=60
         )
-
-
-        # ==================================
-        # API ERROR
-        # ==================================
 
         if response.status_code != 200:
 
             return (
-                f"❌ API Error: {response.status_code}\n\n"
-                f"{response.text}"
+                f"❌ OpenRouter API Error\n\n"
+                f"Status Code: {response.status_code}\n\n"
+                f"Details: {response.text}"
             )
-
 
         result = response.json()
 
-
-        # ==================================
-        # AI RESPONSE
-        # ==================================
-
-        if "choices" not in result:
-
-            return (
-                "❌ AI ne koi valid response nahi diya."
-            )
-
-
         return result["choices"][0]["message"]["content"]
-
 
     except requests.exceptions.Timeout:
 
-        return (
-            "⏱️ AI response mein zyada time lag raha hai. "
-            "Dobara try karein."
-        )
+        return "❌ Request timeout. Please try again."
 
+    except requests.exceptions.RequestException as e:
+
+        return f"❌ Connection Error: {e}"
 
     except Exception as e:
 
-        return f"❌ Error: {str(e)}"
+        return f"❌ Unexpected Error: {e}"
 
 
-# ==========================================
+# ==============================
 # GENERATE BUTTON
-# ==========================================
+# ==============================
 
-if st.button(
-    "🤖 Generate AI Study Plan",
-    use_container_width=True
-):
+if st.button("🚀 Generate AI Study Plan"):
 
     if not subject:
 
-        st.warning(
-            "⚠️ Please enter your subject."
-        )
-
+        st.warning("⚠️ Please enter your subject.")
 
     elif not topics:
 
-        st.warning(
-            "⚠️ Please enter your topics."
-        )
-
-
-    elif remaining_days < 0:
-
-        st.error(
-            "❌ Exam date past mein hai. "
-            "Please select a future exam date."
-        )
-
+        st.warning("⚠️ Please enter your topics / syllabus.")
 
     else:
 
-        with st.spinner(
-            "🤖 AI aapka personalized study plan bana raha hai..."
-        ):
+        with st.spinner("🤖 AI is creating your study plan..."):
 
-            plan = generate_ai_plan()
+            plan = generate_study_plan(
+                subject,
+                exam_date,
+                study_hours,
+                difficulty,
+                topics,
+                language
+            )
 
+        st.markdown("---")
 
-        st.divider()
-
-        st.subheader(
-            "📅 AI Generated Study Plan"
-        )
+        st.header("📅 AI Generated Study Plan")
 
         st.markdown(plan)
+
+
+# ==============================
+# FOOTER
+# ==============================
+
+st.markdown("---")
+
+st.caption(
+    "📚 AI Study Planner | Powered by OpenRouter | "
+    "Data Science & AI Project"
+)
